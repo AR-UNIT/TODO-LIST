@@ -1,15 +1,12 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
-	"strconv"
 	"sync"
 )
 
-// Task struct to represent each task
 type Task struct {
 	ID          int    `json:"id"`
 	Description string `json:"description"`
@@ -20,136 +17,36 @@ var tasks []Task
 var taskID int
 var mu sync.Mutex
 
-// Load tasks from a file
-func loadTasksFromFile() {
-	file, err := os.Open("tasks.json")
+func errorHandler(err error, errorType string) {
 	if err != nil {
-		// If the file doesn't exist, start with an empty task list
-		if os.IsNotExist(err) {
-			tasks = []Task{}
-			taskID = 0
-			return
-		}
-		fmt.Println("Error loading tasks:", err)
-		os.Exit(1)
-	}
-	defer file.Close()
-	json.NewDecoder(file).Decode(&tasks)
-
-	// Update taskID to avoid duplicate IDs
-	for _, task := range tasks {
-		if task.ID > taskID {
-			taskID = task.ID
-		}
-	}
-}
-
-// Save tasks to a file
-func saveTasksToFile() {
-	file, err := os.Create("tasks.json")
-	if err != nil {
-		fmt.Println("Error saving tasks:", err)
-		os.Exit(1)
-	}
-	defer file.Close()
-	json.NewEncoder(file).Encode(tasks)
-}
-
-// Add a new task
-func addTask(w http.ResponseWriter, r *http.Request) {
-	mu.Lock()
-	defer mu.Unlock()
-
-	var task Task
-	if err := json.NewDecoder(r.Body).Decode(&task); err != nil {
-		http.Error(w, "Invalid input", http.StatusBadRequest)
+		fmt.Println(errorType, err)
 		return
 	}
-
-	taskID++
-	task.ID = taskID
-	task.Completed = false
-	tasks = append(tasks, task)
-
-	// Respond with the added task
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(task)
-}
-
-// List all tasks
-func listTasks(w http.ResponseWriter, r *http.Request) {
-	mu.Lock()
-	defer mu.Unlock()
-
-	if len(tasks) == 0 {
-		http.Error(w, "No tasks available", http.StatusNotFound)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(tasks)
-}
-
-// Complete a task
-func completeTask(w http.ResponseWriter, r *http.Request) {
-	mu.Lock()
-	defer mu.Unlock()
-
-	idStr := r.URL.Query().Get("id")
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		http.Error(w, "Invalid task ID", http.StatusBadRequest)
-		return
-	}
-
-	for i, task := range tasks {
-		if task.ID == id {
-			tasks[i].Completed = true
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(tasks[i])
-			return
-		}
-	}
-
-	http.Error(w, "Task not found", http.StatusNotFound)
-}
-
-// Delete a task
-func deleteTask(w http.ResponseWriter, r *http.Request) {
-	mu.Lock()
-	defer mu.Unlock()
-
-	idStr := r.URL.Query().Get("id")
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		http.Error(w, "Invalid task ID", http.StatusBadRequest)
-		return
-	}
-
-	for i, task := range tasks {
-		if task.ID == id {
-			tasks = append(tasks[:i], tasks[i+1:]...)
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(task)
-			return
-		}
-	}
-
-	http.Error(w, "Task not found", http.StatusNotFound)
 }
 
 func main() {
-	// Load tasks from the file when the application starts
-	loadTasksFromFile()
+	// TODO:
+	// hardcoded storage type, to get the task_manager for different storage types
+	taskStorageType := "file" // hardcoded for now, need to figure out how to choose this later
+	manager, err := GetTaskManager(taskStorageType)
+	errorHandler(err, ERROR_CREATING_TASK_MANAGER)
+
+	// Use the loader to load tasks into memory when the application starts
+	loadedTasks, maxID, err := manager.LoadTasks()
+	errorHandler(err, ERROR_LOADING_TASKS)
+
+	// Update global variables
+	tasks = loadedTasks
+	taskID = maxID
 
 	// Define the routes and handlers
 	http.HandleFunc("/tasks", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case "GET":
-			listTasks(w, r)
+
+			manager.ListTasks(w, r)
 		case "POST":
-			addTask(w, r)
+			manager.AddTask(w, r)
 		default:
 			http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
 		}
@@ -157,7 +54,7 @@ func main() {
 
 	http.HandleFunc("/tasks/complete", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "PATCH" {
-			completeTask(w, r)
+			manager.CompleteTask(w, r)
 		} else {
 			http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
 		}
@@ -165,7 +62,7 @@ func main() {
 
 	http.HandleFunc("/tasks/delete", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "DELETE" {
-			deleteTask(w, r)
+			manager.DeleteTask(w, r)
 		} else {
 			http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
 		}
@@ -180,5 +77,5 @@ func main() {
 	}
 
 	// Save tasks to the file when the application exits
-	defer saveTasksToFile()
+	defer manager.LazySave()
 }
