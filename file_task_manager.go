@@ -13,16 +13,8 @@ type FileTaskManager struct {
 	FilePath string
 }
 
-// Save tasks to a file through lazy calls to save, need to figure thist out, and also
-// how to maintain cache of most recent data in memory
-func (fl *FileTaskManager) LazySave() {
-	file, err := os.Create("tasks.json")
-	if err != nil {
-		fmt.Println("Error saving tasks:", err)
-		os.Exit(1)
-	}
-	defer file.Close()
-	json.NewEncoder(file).Encode(tasks)
+func (fl *FileTaskManager) Initialize() {
+
 }
 
 func (fl *FileTaskManager) SaveTasks() error {
@@ -134,4 +126,16 @@ func (fl *FileTaskManager) LoadTasks() ([]Task, int, error) {
 		}
 	}
 	return loadedTasks, maxID, nil
+}
+
+// Save tasks to a file through lazy calls to save, need to figure thist out, and also
+// how to maintain cache of most recent data in memory
+func (fl *FileTaskManager) LazySave() {
+	file, err := os.Create("tasks.json")
+	if err != nil {
+		fmt.Println("Error saving tasks:", err)
+		os.Exit(1)
+	}
+	defer file.Close()
+	json.NewEncoder(file).Encode(tasks)
 }

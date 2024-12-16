@@ -7,6 +7,7 @@ import (
 
 // TaskLoader interface for task loading methods
 type TaskManager interface {
+	Initialize()
 	LoadTasks() ([]Task, int, error)
 	SaveTasks() error
 	AddTask(w http.ResponseWriter, r *http.Request)
@@ -21,8 +22,8 @@ func GetTaskManager(sourceType string) (TaskManager, error) {
 	switch sourceType {
 	case "file":
 		return &FileTaskManager{FilePath: "tasks.json"}, nil
-	//case "database":
-	//	return &DatabaseTaskManager{}, nil
+	case "database":
+		return &DatabaseTaskManager{}, nil
 	default:
 		return nil, fmt.Errorf("unsupported task loader type: %s", sourceType)
 	}

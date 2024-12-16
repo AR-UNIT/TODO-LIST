@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	_ "github.com/lib/pq"
 	"net/http"
 	"os"
 	"sync"
@@ -27,17 +28,13 @@ func errorHandler(err error, errorType string) {
 func main() {
 	// TODO:
 	// hardcoded storage type, to get the task_manager for different storage types
-	taskStorageType := "file" // hardcoded for now, need to figure out how to choose this later
+	//taskStorageType := "file"
+	taskStorageType := "database"
 	manager, err := GetTaskManager(taskStorageType)
 	errorHandler(err, ERROR_CREATING_TASK_MANAGER)
 
-	// Use the loader to load tasks into memory when the application starts
-	loadedTasks, maxID, err := manager.LoadTasks()
+	manager.Initialize()
 	errorHandler(err, ERROR_LOADING_TASKS)
-
-	// Update global variables
-	tasks = loadedTasks
-	taskID = maxID
 
 	// Define the routes and handlers
 	http.HandleFunc("/tasks", func(w http.ResponseWriter, r *http.Request) {
