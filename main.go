@@ -1,22 +1,12 @@
 package main
 
 import (
+	"TODO-LIST/TaskManagers"
 	"fmt"
 	_ "github.com/lib/pq"
 	"net/http"
 	"os"
-	"sync"
 )
-
-type Task struct {
-	ID          int    `json:"id"`
-	Description string `json:"description"`
-	Completed   bool   `json:"completed"`
-}
-
-var tasks []Task
-var taskID int
-var mu sync.Mutex
 
 func errorHandler(err error, errorType string) {
 	if err != nil {
@@ -27,10 +17,9 @@ func errorHandler(err error, errorType string) {
 
 func main() {
 	// TODO:
-	// hardcoded storage type, to get the task_manager for different storage types
-	//taskStorageType := "file"
-	taskStorageType := "database"
-	manager, err := GetTaskManager(taskStorageType)
+	// hardcoded storage type, to get the task_manager for different storage types, make dynamic
+	taskStorageType := "postgresDb"
+	manager, err := TaskManagers.GetTaskManager(taskStorageType)
 	errorHandler(err, ERROR_CREATING_TASK_MANAGER)
 
 	manager.Initialize()
@@ -73,6 +62,10 @@ func main() {
 		os.Exit(1)
 	}
 
+	// TODO:
+	// THIS WILL NEVER BE CALLED WITHOUT A GRACEFUL SHUTDOWN HANDLER,
+	// ALSO THIS IS NOT USEFUL IF WE ARE NOT USING A CACHE TO STORE OPERATIONS IN MEMORY,
+	// ALL OPERATIONS ARE ALWAYS BEEN DONE DIRECTLY TO THE DB
 	// Save tasks to the file when the application exits
 	defer manager.LazySave()
 }
