@@ -4,4 +4,4 @@ I am learning GO, and I am building a project to understand and execute the fund
 
 The functionality managed is basic, just standard CRUD operations for a TODO list applicaiton.
 
-However, I want to apply as many backend concepts and GO constructs in the project as feasible, such as goroutines, channels, mutexes, caching, etc.
+However, I want to apply as many backend concepts and GO constructs in the project as feasible, such as goroutines, channels, mutexes, caching, middleware, input message streams, db connections, containerization, deploying on cloud enviroments etc.
