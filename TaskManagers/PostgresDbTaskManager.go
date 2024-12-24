@@ -2,6 +2,7 @@ package TaskManagers
 
 import (
 	"TODO-LIST/DbQueryStrategies"
+	"TODO-LIST/Deserializers"
 	"TODO-LIST/commons"
 	"database/sql"
 	"encoding/json"
@@ -18,6 +19,10 @@ func SelectStrategy(db *sql.DB, queryStrategy string) DbQueryStrategies.Database
 	switch queryStrategy {
 	case "rowLockingStrategy":
 		return &DbQueryStrategies.PostgresRowLockingStrategy{
+			BasePostgresStrategy: DbQueryStrategies.BasePostgresStrategy{Db: db},
+		}
+	case "enhancedListStrategy":
+		return &DbQueryStrategies.PostgresEnhancedStrategy{
 			BasePostgresStrategy: DbQueryStrategies.BasePostgresStrategy{Db: db},
 		}
 	default:
@@ -95,7 +100,8 @@ func (dtm *DatabaseTaskManager) Initialize() {
 	log.Println("Database connection initialized successfully.")
 
 	// Choose whether to use row locking (example: based on an environment variable or config)
-	dbQueryStrategy := "rowLockingStrategy" // Set this based on your application's requirements
+	//dbQueryStrategy := "rowLockingStrategy"
+	dbQueryStrategy := "enhancedListStrategy"
 
 	// Select the strategy and assign it
 	dtm.strategy = SelectStrategy(dtm.Db, dbQueryStrategy)
@@ -127,20 +133,37 @@ func (dtm *DatabaseTaskManager) AddTask(w http.ResponseWriter, r *http.Request) 
 	json.NewEncoder(w).Encode(task)
 }
 
-// ListTasks lists tasks from the database using the strategy
 func (dtm *DatabaseTaskManager) ListTasks(w http.ResponseWriter, r *http.Request) {
 	dtm.mu.Lock()
 	defer dtm.mu.Unlock()
 
-	// List the tasks using the strategy method (no need to pass Db explicitly)
-	tasks, err := dtm.strategy.ListTasks()
+	// Read query parameters (page, limit) directly from the URL
+	params, err := Deserializers.DeserializeListTasksRequest(r)
+	if err != nil {
+		http.Error(w, "Invalid parameters", http.StatusBadRequest)
+		return
+	}
+
+	// Log the query parameters (no need to decode the body in GET requests)
+	fmt.Println("Decoded params: ", params)
+
+	// Call the strategy with the map of parameters
+	tasks, err := dtm.strategy.ListTasks(params)
+
 	if err != nil {
 		http.Error(w, "Error retrieving tasks from database", http.StatusInternalServerError)
 		return
 	}
 
+	// Build the response with pagination details
+	response := map[string]interface{}{
+		"page":  params["page"],
+		"limit": params["limit"],
+		"data":  tasks,
+		"total": len(tasks),
+	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(tasks)
+	json.NewEncoder(w).Encode(response)
 }
 
 // CompleteTask marks a task as completed using the strategy

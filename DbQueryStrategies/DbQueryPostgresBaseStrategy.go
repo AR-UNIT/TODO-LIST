@@ -22,7 +22,8 @@ func (bps *BasePostgresStrategy) AddTask(task commons.Task) (int, error) {
 	return id, nil
 }
 
-func (bps *BasePostgresStrategy) ListTasks() ([]commons.Task, error) {
+// TODO: params is unsused in base strategy, need to update
+func (bps *BasePostgresStrategy) ListTasks(params map[string]interface{}) ([]commons.Task, error) {
 	rows, err := bps.Db.Query(`SELECT id, description, completed FROM TODO.tasks`)
 	if err != nil {
 		return nil, err
