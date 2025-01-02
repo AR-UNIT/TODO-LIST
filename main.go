@@ -1,9 +1,14 @@
 package main
 
 import (
+	handlerJWT "TODO-LIST/Handlers/auth"
+	authJWT "TODO-LIST/Middleware/Authenticators/jwt" // Authenticator package
+	"TODO-LIST/Middleware/RateLimiters"
 	"TODO-LIST/TaskManagers"
+	"TODO-LIST/constants"
 	"fmt"
 	_ "github.com/lib/pq"
+	"golang.org/x/time/rate"
 	"net/http"
 	"os"
 )
@@ -20,39 +25,37 @@ func main() {
 	// hardcoded storage type, to get the task_manager for different storage types, make dynamic
 	taskStorageType := "postgresDb"
 	manager, err := TaskManagers.GetTaskManager(taskStorageType)
-	errorHandler(err, ERROR_CREATING_TASK_MANAGER)
-
+	errorHandler(err, constants.ERROR_CREATING_TASK_MANAGER)
 	manager.Initialize()
-	errorHandler(err, ERROR_LOADING_TASKS)
+	errorHandler(err, constants.ERROR_LOADING_TASKS)
 
-	// Define the routes and handlers
-	http.HandleFunc("/tasks", func(w http.ResponseWriter, r *http.Request) {
+	/*
+		The initial burst allows 10 requests to be sent quickly (all at once or within a fraction of a second).
+		Once that burst is consumed, the system switches to enforcing the 5 requests per second rate limit.
+		If the client exceeds the 5 requests per second, further requests will be rejected until the next second when the limit resets.
+
+		burst is replenished based on rate specified
+	*/
+	rateLimiter := RateLimiters.NewRateLimiter(rate.Limit(5), 10)
+
+	// Register the authentication endpoint
+	// Handles client login and JWT generation
+	http.Handle("/api/authenticate", rateLimiter.Apply(http.HandlerFunc(handlerJWT.AuthenticateClient)))
+
+	http.Handle("/tasks", rateLimiter.Apply(authJWT.AuthenticateJWT(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
-		case "GET":
-
+		case constants.HTTPMethodGet:
 			manager.ListTasks(w, r)
-		case "POST":
+		case constants.HTTPMethodPost:
 			manager.AddTask(w, r)
-		default:
-			http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
-		}
-	})
-
-	http.HandleFunc("/tasks/complete", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == "PATCH" {
+		case constants.HTTPMethodPatch:
 			manager.CompleteTask(w, r)
-		} else {
-			http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
-		}
-	})
-
-	http.HandleFunc("/tasks/delete", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == "DELETE" {
+		case constants.HTTPMethodDelete:
 			manager.DeleteTask(w, r)
-		} else {
-			http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+		default:
+			http.Error(w, constants.ErrorInvalidMethod, constants.StatusMethodNotAllowed)
 		}
-	})
+	}))))
 
 	// Start the server
 	port := ":8080"

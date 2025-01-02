@@ -1,4 +1,4 @@
-package DbQueryStrategies
+package PostgresDb
 
 import (
 	"TODO-LIST/commons"
@@ -6,13 +6,16 @@ import (
 	"fmt"
 )
 
-type BasePostgresStrategy struct {
+type DbContext struct {
 	Db *sql.DB
 }
 
-// BasePostgresStrategy handles common database operations
+// DbContext handles default database operations
+type DefaultPostgresStrategy struct {
+	DbContext
+}
 
-func (bps *BasePostgresStrategy) AddTask(task commons.Task) (int, error) {
+func (bps *DbContext) AddTask(task commons.Task) (int, error) {
 	query := `INSERT INTO TODO.tasks (description, completed) VALUES ($1, $2) RETURNING id`
 	var id int
 	err := bps.Db.QueryRow(query, task.Description, false).Scan(&id)
@@ -23,7 +26,7 @@ func (bps *BasePostgresStrategy) AddTask(task commons.Task) (int, error) {
 }
 
 // TODO: params is unsused in base strategy, need to update
-func (bps *BasePostgresStrategy) ListTasks(params map[string]interface{}) ([]commons.Task, error) {
+func (bps *DbContext) ListTasks(params map[string]interface{}) ([]commons.Task, error) {
 	rows, err := bps.Db.Query(`SELECT id, description, completed FROM TODO.tasks`)
 	if err != nil {
 		return nil, err
@@ -41,7 +44,7 @@ func (bps *BasePostgresStrategy) ListTasks(params map[string]interface{}) ([]com
 	return tasks, nil
 }
 
-func (bps *BasePostgresStrategy) CompleteTask(id int) (int64, error) {
+func (bps *DbContext) CompleteTask(id int) (int64, error) {
 	query := `UPDATE TODO.tasks SET completed = true WHERE id = $1`
 	res, err := bps.Db.Exec(query, id)
 	if err != nil {
@@ -55,7 +58,7 @@ func (bps *BasePostgresStrategy) CompleteTask(id int) (int64, error) {
 	return rowsAffected, nil
 }
 
-func (bps *BasePostgresStrategy) DeleteTask(id int) (int64, error) {
+func (bps *DbContext) DeleteTask(id int) (int64, error) {
 	query := `DELETE FROM TODO.tasks WHERE id = $1`
 	res, err := bps.Db.Exec(query, id)
 	if err != nil {

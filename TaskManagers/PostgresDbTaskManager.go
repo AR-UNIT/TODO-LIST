@@ -2,6 +2,7 @@ package TaskManagers
 
 import (
 	"TODO-LIST/DbQueryStrategies"
+	"TODO-LIST/DbQueryStrategies/PostgresDb"
 	"TODO-LIST/Deserializers"
 	"TODO-LIST/commons"
 	"database/sql"
@@ -18,16 +19,25 @@ import (
 func SelectStrategy(db *sql.DB, queryStrategy string) DbQueryStrategies.DatabaseQueryStrategy {
 	switch queryStrategy {
 	case "rowLockingStrategy":
-		return &DbQueryStrategies.PostgresRowLockingStrategy{
-			BasePostgresStrategy: DbQueryStrategies.BasePostgresStrategy{Db: db},
+		return &PostgresDb.RowLockingStrategy{
+			DbContext: PostgresDb.DbContext{Db: db},
 		}
 	case "enhancedListStrategy":
-		return &DbQueryStrategies.PostgresEnhancedStrategy{
-			BasePostgresStrategy: DbQueryStrategies.BasePostgresStrategy{Db: db},
+		return &PostgresDb.EnhancedListStrategy{
+			DbContext: PostgresDb.DbContext{Db: db},
+		}
+	case "combinedRowLockingEnhancedListStrategy":
+		return &PostgresDb.CombinedRowLockingEnhancedListStrategy{
+			RowLockingStrategy: PostgresDb.RowLockingStrategy{
+				DbContext: PostgresDb.DbContext{Db: db},
+			},
+			EnhancedListStrategy: PostgresDb.EnhancedListStrategy{
+				DbContext: PostgresDb.DbContext{Db: db},
+			},
 		}
 	default:
-		return &DbQueryStrategies.PostgresStrategy{
-			BasePostgresStrategy: DbQueryStrategies.BasePostgresStrategy{Db: db},
+		return &PostgresDb.DefaultPostgresStrategy{
+			DbContext: PostgresDb.DbContext{Db: db},
 		}
 	}
 }
@@ -102,6 +112,8 @@ func (dtm *DatabaseTaskManager) Initialize() {
 	// Choose whether to use row locking (example: based on an environment variable or config)
 	//dbQueryStrategy := "rowLockingStrategy"
 	dbQueryStrategy := "enhancedListStrategy"
+	//dbQueryStrategy := "combinedRowLockingEnhancedListStrategy"
+	//dbQueryStrategy := "default"
 
 	// Select the strategy and assign it
 	dtm.strategy = SelectStrategy(dtm.Db, dbQueryStrategy)
@@ -138,7 +150,7 @@ func (dtm *DatabaseTaskManager) ListTasks(w http.ResponseWriter, r *http.Request
 	defer dtm.mu.Unlock()
 
 	// Read query parameters (page, limit) directly from the URL
-	params, err := Deserializers.DeserializeListTasksRequest(r)
+	params, err := Deserializers.ListRequest(r)
 	if err != nil {
 		http.Error(w, "Invalid parameters", http.StatusBadRequest)
 		return

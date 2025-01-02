@@ -1,8 +1,8 @@
-package DbQueryStrategies
+package PostgresDb
 
-// PostgresRowLockingStrategy for PostgreSQL operations with explicit row locking
-type PostgresRowLockingStrategy struct {
-	BasePostgresStrategy
+// RowLockingStrategy for PostgreSQL operations with explicit row locking
+type RowLockingStrategy struct {
+	DbContext
 }
 
 // ONLY ROW LOCKING ON WRITES TO DB
@@ -19,8 +19,11 @@ type PostgresRowLockingStrategy struct {
 	Problem with ReadCommitted isolation level is non-repeatable reads,
 		same row has different values when read at different points of time in the same transaction.
 */
+/*
+	IF WE HAVE ROW LOCKING, WE NEED TO HAVE RETRY, SO THAT DEADLOCK SCENARIOS CAN BE HANDLED
+*/
 
-func (prls *PostgresRowLockingStrategy) CompleteTask(id int) (int64, error) {
+func (prls *RowLockingStrategy) CompleteTask(id int) (int64, error) {
 	// Add row locking before completing the task
 	lockQuery := `SELECT id FROM TODO.tasks WHERE id = $1 FOR UPDATE`
 	_, err := prls.Db.Exec(lockQuery, id)
@@ -29,10 +32,10 @@ func (prls *PostgresRowLockingStrategy) CompleteTask(id int) (int64, error) {
 	}
 
 	// Use the base method for the actual update
-	return prls.BasePostgresStrategy.CompleteTask(id)
+	return prls.DbContext.CompleteTask(id)
 }
 
-func (prls *PostgresRowLockingStrategy) DeleteTask(id int) (int64, error) {
+func (prls *RowLockingStrategy) DeleteTask(id int) (int64, error) {
 	// Add row locking before deleting the task
 	lockQuery := `SELECT id FROM TODO.tasks WHERE id = $1 FOR UPDATE`
 	_, err := prls.Db.Exec(lockQuery, id)
@@ -41,5 +44,5 @@ func (prls *PostgresRowLockingStrategy) DeleteTask(id int) (int64, error) {
 	}
 
 	// Use the base method for the actual delete
-	return prls.BasePostgresStrategy.DeleteTask(id)
+	return prls.DbContext.DeleteTask(id)
 }

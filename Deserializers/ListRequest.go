@@ -2,12 +2,11 @@ package Deserializers
 
 import (
 	"encoding/json"
-	"errors"
 	"net/http"
 )
 
 // Deserialize ListTasks request body or query parameters to a map
-func DeserializeListTasksRequest(r *http.Request) (map[string]interface{}, error) {
+func ListRequest(r *http.Request) (map[string]interface{}, error) {
 	params := make(map[string]interface{})
 
 	// Deserialize query parameters for page, limit, status, and sort
@@ -43,10 +42,6 @@ func DeserializeListTasksRequest(r *http.Request) (map[string]interface{}, error
 		for key, value := range bodyParams {
 			params[key] = value
 		}
-	}
-
-	if len(params) == 0 {
-		return nil, errors.New("no valid parameters found")
 	}
 
 	return params, nil

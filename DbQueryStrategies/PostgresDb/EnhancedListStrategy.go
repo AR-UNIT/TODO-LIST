@@ -1,4 +1,4 @@
-package DbQueryStrategies
+package PostgresDb
 
 import (
 	"TODO-LIST/commons"
@@ -7,12 +7,12 @@ import (
 	"strings"
 )
 
-type PostgresEnhancedStrategy struct {
-	BasePostgresStrategy
+type EnhancedListStrategy struct {
+	DbContext
 }
 
 // ListTasks implements pagination, filtering, and sorting using a map of parameters
-func (pes *PostgresEnhancedStrategy) ListTasks(params map[string]interface{}) ([]commons.Task, error) {
+func (pes *EnhancedListStrategy) ListTasks(params map[string]interface{}) ([]commons.Task, error) {
 	// Extract parameters using helper functions
 	page := extractIntParam(params, "page", 1)
 	limit := extractIntParam(params, "limit", 10)
