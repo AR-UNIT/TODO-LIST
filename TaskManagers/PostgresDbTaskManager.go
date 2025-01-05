@@ -8,9 +8,11 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"github.com/joho/godotenv"
 	_ "github.com/lib/pq" // Import the pq driver for database/sql
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"sync"
 )
@@ -88,14 +90,32 @@ func (dtm *DatabaseTaskManager) LazySave() {
 }
 
 func (dtm *DatabaseTaskManager) Initialize() {
+	// Load .env file
+	err := godotenv.Load()
+	if err != nil {
+		log.Println("No .env file found, assuming environment variables are set")
+	}
+	host := os.Getenv("DB_HOST")
+	portStr := os.Getenv("DB_PORT")
+	user := os.Getenv("DB_USER")
+	password := os.Getenv("DB_PASSWORD")
+	dbName := os.Getenv("DB_NAME")
+	sslMode := os.Getenv("DB_SSLMODE")
+
+	// Convert DB_PORT from string to integer
+	port, err := strconv.Atoi(portStr)
+	if err != nil {
+		log.Fatalf("Invalid DB_PORT value: %v", err)
+	}
+
 	// Define the database configuration
 	config := commons.DBConfig{
-		Host:     "localhost",
-		Port:     5432,
-		User:     "postgres",
-		Password: "123456",
-		DbName:   "postgres",
-		SSLMode:  "disable",
+		Host:     host,
+		Port:     port, // Use the integer value
+		User:     user,
+		Password: password,
+		DbName:   dbName,
+		SSLMode:  sslMode,
 	}
 
 	// Initialize the database connection
@@ -104,16 +124,14 @@ func (dtm *DatabaseTaskManager) Initialize() {
 		log.Println("Error initializing database:", err)
 		return
 	}
+	// Initialize the database connection
+	log.Printf("Initializing database connection to %s:%d", host, port)
 
 	// Assign the established connection to the struct
 	dtm.Db = db
 	log.Println("Database connection initialized successfully.")
 
-	// Choose whether to use row locking (example: based on an environment variable or config)
-	//dbQueryStrategy := "rowLockingStrategy"
-	dbQueryStrategy := "enhancedListStrategy"
-	//dbQueryStrategy := "combinedRowLockingEnhancedListStrategy"
-	//dbQueryStrategy := "default"
+	dbQueryStrategy := os.Getenv("DB_QUERY_STRATEGY")
 
 	// Select the strategy and assign it
 	dtm.strategy = SelectStrategy(dtm.Db, dbQueryStrategy)

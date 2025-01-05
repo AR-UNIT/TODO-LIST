@@ -7,9 +7,12 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"github.com/joho/godotenv"
 	_ "github.com/lib/pq" // Assuming you're using PostgreSQL
 	"log"
 	"net/http"
+	"os"
+	"strconv"
 )
 
 // ClientCredentials represents the payload for login requests
@@ -63,13 +66,33 @@ func AuthenticateClient(w http.ResponseWriter, r *http.Request) {
 func Initialize() (*sql.DB, error) {
 	// Set up DB connection (you might want to use a connection pool in real applications)
 	// Define the database configuration
+
+	// Load .env file
+	err := godotenv.Load()
+	if err != nil {
+		log.Println("No .env file found, assuming environment variables are set")
+	}
+	host := os.Getenv("DB_HOST")
+	portStr := os.Getenv("DB_PORT")
+	user := os.Getenv("DB_USER")
+	password := os.Getenv("DB_PASSWORD")
+	dbName := os.Getenv("DB_NAME")
+	sslMode := os.Getenv("DB_SSLMODE")
+
+	// Convert DB_PORT from string to integer
+	port, err := strconv.Atoi(portStr)
+	if err != nil {
+		log.Fatalf("Invalid DB_PORT value: %v", err)
+	}
+
+	// Define the database configuration
 	config := commons.DBConfig{
-		Host:     "localhost",
-		Port:     5432,
-		User:     "postgres",
-		Password: "123456",
-		DbName:   "postgres",
-		SSLMode:  "disable",
+		Host:     host,
+		Port:     port, // Use the integer value
+		User:     user,
+		Password: password,
+		DbName:   dbName,
+		SSLMode:  sslMode,
 	}
 
 	// Initialize the database connection

@@ -7,10 +7,13 @@ import (
 	"TODO-LIST/TaskManagers"
 	"TODO-LIST/constants"
 	"fmt"
+	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	"golang.org/x/time/rate"
+	"log"
 	"net/http"
 	"os"
+	"strconv"
 )
 
 func errorHandler(err error, errorType string) {
@@ -23,12 +26,29 @@ func errorHandler(err error, errorType string) {
 func main() {
 	// TODO:
 	// hardcoded storage type, to get the task_manager for different storage types, make dynamic
-	taskStorageType := "postgresDb"
+	err := godotenv.Load()
+	if err != nil {
+		log.Println("No .env file found, assuming environment variables are set")
+	}
+
+	taskStorageType := os.Getenv("TASK_STORAGE_TYPE")
 	manager, err := TaskManagers.GetTaskManager(taskStorageType)
 	errorHandler(err, constants.ERROR_CREATING_TASK_MANAGER)
 	manager.Initialize()
 	errorHandler(err, constants.ERROR_LOADING_TASKS)
 
+	rateLimiterLimit := os.Getenv("RATE_LIMITER_LIMIT")
+	rateLimiterBust := os.Getenv("RATE_LIMITER_BURST")
+
+	rateLimit, err := strconv.Atoi(rateLimiterLimit)
+	if err != nil {
+		log.Fatalf("Invalid rateLimit value: %v", err)
+	}
+
+	rateBurst, err := strconv.Atoi(rateLimiterBust)
+	if err != nil {
+		log.Fatalf("Invalid rateBurst value: %v", err)
+	}
 	/*
 		The initial burst allows 10 requests to be sent quickly (all at once or within a fraction of a second).
 		Once that burst is consumed, the system switches to enforcing the 5 requests per second rate limit.
@@ -36,7 +56,7 @@ func main() {
 
 		burst is replenished based on rate specified
 	*/
-	rateLimiter := RateLimiters.NewRateLimiter(rate.Limit(5), 10)
+	rateLimiter := RateLimiters.NewRateLimiter(rate.Limit(rateLimit), rateBurst)
 
 	// Register the authentication endpoint
 	// Handles client login and JWT generation
@@ -58,9 +78,9 @@ func main() {
 	}))))
 
 	// Start the server
-	port := ":8080"
-	fmt.Printf("Server started on http://localhost%s\n", port)
-	if err := http.ListenAndServe(port, nil); err != nil {
+	apiPort := os.Getenv("API_PORT")
+	fmt.Printf("Server started on http://localhost%s\n", apiPort)
+	if err := http.ListenAndServe(apiPort, nil); err != nil {
 		fmt.Println("Error starting server:", err)
 		os.Exit(1)
 	}

@@ -1,0 +1,19 @@
+# Ignore the binary
+todo-list-app
+
+# Ignore Go local environment
+*.out
+*.log
+*.tmp
+*.swp
+*.swo
+.idea
+.vscode
+*.bak
+__MACOSX
+node_modules
+test-results
+
+# Ignore Git-related files
+.git
+.gitignore
