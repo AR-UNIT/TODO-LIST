@@ -1,4 +1,4 @@
-This is a project I used to learn backend implementation and principles in GoLang.
+What is it?
 The project intends to implement logically simple CRUD operations of a TODO application, however, tries to include
 as many aspects and tools/frameworks as possible in the implementation.
 
