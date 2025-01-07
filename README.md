@@ -43,8 +43,10 @@ The project implements logically simple CRUD operations for a TODO application, 
    - Handles JWT authentication, rate limiting, and request routing.
    - handles api calls for task creation, update task to mark complete, delete task, and list tasks(in paginated + queried) format
 3. **Backend Services**:
-   - Written in Go (or Python for specific components) implementing CRUD functionality for TODO items.
+   - Written in Go implementing CRUD functionality for TODO items.
    - Follows factory and strategy patterns for extensibility.
+     - Different query strategies can be implemented, and combined to form composite query strategy for the crud operations.
+     - Task manager is provided via factory pattern, task manager is dependent on the mode of storage used for the tasks(PosgtesDB, etc).
    - Streams events to Kafka and integrates with Redis for caching.
 4. **Kafka**: 
    - Streams API request events and handles event consumption.
