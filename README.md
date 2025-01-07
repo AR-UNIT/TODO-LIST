@@ -41,6 +41,7 @@ The project implements logically simple CRUD operations for a TODO application, 
    - Web or mobile apps communicate with the API over HTTPS.
 2. **API Gateway**: 
    - Handles JWT authentication, rate limiting, and request routing.
+   - handles api calls for task creation, update task to mark complete, delete task, and list tasks(in paginated + queried) format
 3. **Backend Services**:
    - Written in Go (or Python for specific components) implementing CRUD functionality for TODO items.
    - Follows factory and strategy patterns for extensibility.
