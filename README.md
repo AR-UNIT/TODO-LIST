@@ -23,7 +23,7 @@ The project implements logically simple CRUD operations for a TODO application, 
 
 ## Database Isolation and Concurrency
 
-- **Row Locking Strategy**: Prevents race conditions during write/update operations.
+- **Row Locking For writes Strategy**: Prevents race conditions during write/update operations.
 - **Read Committed Isolation Level**: Default isolation level in PostgresDB that provides certain guarantees but allows potential stale reads.
 
 ### Race Condition Safety in Read Committed and Row Locking
