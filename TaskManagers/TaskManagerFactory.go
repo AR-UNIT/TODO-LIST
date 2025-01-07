@@ -1,6 +1,7 @@
 package TaskManagers
 
 import (
+	"TODO-LIST/commons"
 	"fmt"
 	"net/http"
 )
@@ -9,10 +10,10 @@ import (
 type TaskManager interface {
 	Initialize()
 	SaveTasks() error
-	AddTask(w http.ResponseWriter, r *http.Request)
+	AddTask(task *commons.TaskInputModel)
 	ListTasks(w http.ResponseWriter, r *http.Request)
-	CompleteTask(w http.ResponseWriter, r *http.Request)
-	DeleteTask(w http.ResponseWriter, r *http.Request)
+	CompleteTask(taskId string)
+	DeleteTask(taskId string)
 	LazySave()
 }
 

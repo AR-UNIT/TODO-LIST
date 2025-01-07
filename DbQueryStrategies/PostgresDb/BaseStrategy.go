@@ -15,10 +15,11 @@ type DefaultPostgresStrategy struct {
 	DbContext
 }
 
-func (bps *DbContext) AddTask(task commons.Task) (int, error) {
+func (bps *DbContext) AddTask(taskInput *commons.TaskInputModel) (int, error) {
 	query := `INSERT INTO TODO.tasks (description, completed) VALUES ($1, $2) RETURNING id`
 	var id int
-	err := bps.Db.QueryRow(query, task.Description, false).Scan(&id)
+	fmt.Println("before applying insert task query")
+	err := bps.Db.QueryRow(query, taskInput.Description, false).Scan(&id)
 	if err != nil {
 		return 0, err
 	}

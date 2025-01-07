@@ -1,7 +1,5 @@
  - evaluate usage of workerpools, channels, and maintaining serialization + avoiding race conditions, 
     to what extent could mutexes and row locking be relaxed for strong consistency.
- - CONTAINERIZE AND DEPLOY
- - KAFKA INPUT STREAM
  - IMPLEMENT CACHING USING REDIS
  - IMPLEMENT BATCHING OF DB CALLS TO MAKE UPDATES TO DB, USING DIRTY CACHE BEFORE PERIODICALLY DOING DB CALL
  - IMPLEMENT TIMESTAMPING, AND CONSENSUS ALGO FOR GUARDING AGAINST CLOCK DRIFT ACROSS NODES

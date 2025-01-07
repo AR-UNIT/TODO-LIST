@@ -4,6 +4,7 @@ import (
 	"TODO-LIST/Middleware/Authenticators/jwt"
 	dbTaskManager "TODO-LIST/TaskManagers"
 	"TODO-LIST/commons"
+	"TODO-LIST/utils"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -15,16 +16,18 @@ import (
 	"strconv"
 )
 
+// USED BY CLIENT AT ENDPOINT /api/authenticate TO GET THE JWT TOKEN
+
 // ClientCredentials represents the payload for login requests
 
-// AuthenticateClient handles client login and JWT generation
-func AuthenticateClient(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("AuthenticateClient")
+// AuthenticateAndProvideJWT handles client login and JWT generation
+func AuthenticateAndProvideJWT(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("AuthenticateAndProvideJWT")
 
-	//creds, ok := r.Context().Value("creds").(commons.ClientCredentials)
-	creds, ok := r.Context().Value("creds").(*commons.ClientCredentials)
+	// rate limiter would have been called first, which already puts the client credentials in ctx
+	creds, ok := utils.GetClientCredentials(r)
 	if !ok {
-		http.Error(w, "Failed to retrieve client credentials", http.StatusInternalServerError)
+		http.Error(w, "Failed to retrieve client credentials from payload", http.StatusInternalServerError)
 		return
 	}
 
@@ -40,6 +43,8 @@ func AuthenticateClient(w http.ResponseWriter, r *http.Request) {
 	defer db.Close() // Ensure the DB connection is closed after use
 
 	// Validate credentials (replace with database lookup)
+
+	fmt.Println("Database connection established, going to do the client lookup now")
 	var clientLookup commons.ClientCredentials
 	query := "SELECT client_id, client_secret FROM TODO.clients WHERE client_id = $1"
 	err = db.QueryRow(query, creds.ClientID).Scan(&clientLookup.ClientID, &clientLookup.ClientSecret)
@@ -47,6 +52,8 @@ func AuthenticateClient(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
 		return
 	}
+
+	fmt.Println("Successfully authenticated user: ", clientLookup.ClientID, clientLookup.ClientSecret)
 
 	// Generate JWT
 	token, err := jwt.GenerateJWT(clientLookup.ClientID)
@@ -60,6 +67,7 @@ func AuthenticateClient(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{
 		"token": token,
 	})
+	fmt.Println("generated jwt token:  ", token)
 }
 
 // Initialize sets up to the DB connection storing client details and returns it
@@ -97,6 +105,7 @@ func Initialize() (*sql.DB, error) {
 
 	// Initialize the database connection
 	db, err := dbTaskManager.InitializeDB(config)
+	fmt.Println("returned back to initialize in jwt handler after doing db initialization")
 
 	if err != nil {
 		log.Printf("Error opening database connection: %v", err)

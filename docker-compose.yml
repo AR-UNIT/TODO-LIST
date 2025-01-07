@@ -1,21 +1,34 @@
+version: "3.8"
+
 services:
   app:
     build:
       context: .
       dockerfile: Dockerfile
-
     env_file:
-      - .env
+      - ./.env  # Load environment variables from the .env file
     ports:
       - "8080:8080"
     environment:
-      - DB_HOST=${DB_HOST}
-      - DB_PORT=${DB_PORT}
+      - DB_HOST=postgres
+      - DB_PORT=5432
       - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
       - DB_NAME=${DB_NAME}
+      - KAFKA_BROKER_ADDRESS=kafka:9093
+      - KAFKA_TOPIC=${KAFKA_TOPIC}
     depends_on:
       - postgres
+      - kafka
+    restart: always  # Ensure the app restarts if it fails
+    healthcheck:
+      test: ["CMD", "nc", "-z", "kafka", "9093"]  # Wait for Kafka to be up
+      interval: 10s
+      retries: 10
+      start_period: 20s
+      timeout: 5s
+    volumes:
+      - ./.env:/app/.env  # Correct volume mount for the .env file
 
   postgres:
     image: postgres:15
@@ -27,8 +40,47 @@ services:
       - "5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
+      - ./schemas/PostgresDb:/docker-entrypoint-initdb.d
+      - ./.env:/app/.env  # Correct volume mount for the .env file
     env_file:
-      - .env
+      - ./.env
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${DB_USER}", "-d", "${DB_NAME}", "-h", "localhost", "-p", "5432"]
+      interval: 10s
+      retries: 5
+      start_period: 10s
+      timeout: 5s
+    restart: always  # Ensure the Postgres service restarts if it fails
+
+  kafka:
+    image: wurstmeister/kafka:latest
+    environment:
+      KAFKA_ADVERTISED_LISTENER: PLAINTEXT://kafka:9093  # Use PLAINTEXT for testing
+      KAFKA_LISTENERS: PLAINTEXT://kafka:9093        # Kafka listener address for internal communication
+      KAFKA_LISTENER_SECURITY_PROTOCOL: PLAINTEXT        # No security protocol needed for now
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181             # Connect to the Zookeeper container
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'  # Enable auto-creation of topics
+    ports:
+      - "9093:9093"  # Expose port 9093 for Kafka access
+    depends_on:
+      - zookeeper
+    restart: always
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "9093"]  # Check if Kafka is listening
+      interval: 10s
+      retries: 5
+      start_period: 20s
+      timeout: 5s
+
+  zookeeper:
+    image: wurstmeister/zookeeper:latest
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+    ports:
+      - "2181:2181"  # Expose Zookeeper client port
 
 volumes:
+  kafka-data:
+    driver: local
   postgres-data:
+    driver: local

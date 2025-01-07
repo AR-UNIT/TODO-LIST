@@ -5,6 +5,13 @@ const (
 	ERROR_CREATING_TASK_MANAGER = "Error creating task manager"
 )
 
+const (
+	CREATE_TASK   = "CreateTask"
+	COMPLETE_TASK = "CompleteTask"
+	DELETE_TASK   = "DeleteTask"
+	LIST_TASK     = "ListTask"
+)
+
 // Error Messages
 const (
 	ErrorInvalidMethod          = "Invalid request method"

@@ -139,28 +139,17 @@ func (dtm *DatabaseTaskManager) Initialize() {
 }
 
 // AddTask adds a task to the database using the strategy
-func (dtm *DatabaseTaskManager) AddTask(w http.ResponseWriter, r *http.Request) {
+func (dtm *DatabaseTaskManager) AddTask(taskInput *commons.TaskInputModel) {
 	dtm.mu.Lock()
 	defer dtm.mu.Unlock()
-
-	var task commons.Task
-	if err := json.NewDecoder(r.Body).Decode(&task); err != nil {
-		http.Error(w, "Invalid input", http.StatusBadRequest)
-		return
-	}
-
+	fmt.Println("Before dtm.strategy.AddTask")
 	// Add the task using the strategy method (no need to pass Db explicitly)
-	id, err := dtm.strategy.AddTask(task)
+	id, err := dtm.strategy.AddTask(taskInput)
 	if err != nil {
-		http.Error(w, "Error inserting task into database", http.StatusInternalServerError)
+		fmt.Println("Error inserting task into database", http.StatusInternalServerError)
 		return
 	}
-
-	task.ID = id
-	task.Completed = false
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(task)
+	fmt.Println("Task Created with ID: ", id)
 }
 
 func (dtm *DatabaseTaskManager) ListTasks(w http.ResponseWriter, r *http.Request) {
@@ -197,58 +186,54 @@ func (dtm *DatabaseTaskManager) ListTasks(w http.ResponseWriter, r *http.Request
 }
 
 // CompleteTask marks a task as completed using the strategy
-func (dtm *DatabaseTaskManager) CompleteTask(w http.ResponseWriter, r *http.Request) {
+func (dtm *DatabaseTaskManager) CompleteTask(id string) {
 	dtm.mu.Lock()
 	defer dtm.mu.Unlock()
 
 	// Convert id from string to int
-	id := r.URL.Query().Get("id")
+	//id := r.URL.Query().Get("id")
 	taskID, err := strconv.Atoi(id)
 	if err != nil {
-		http.Error(w, "Invalid task ID", http.StatusBadRequest)
+		fmt.Println("Invalid task ID", http.StatusBadRequest)
 		return
 	}
 
 	// Call CompleteTask on the strategy (pass the task ID as an int)
 	rowsAffected, err := dtm.strategy.CompleteTask(taskID)
 	if err != nil {
-		http.Error(w, "Error updating task", http.StatusInternalServerError)
+		fmt.Println("Error deleting task", http.StatusInternalServerError)
 		return
 	}
 
 	if rowsAffected == 0 {
-		http.Error(w, "Task not found", http.StatusNotFound)
+		fmt.Println("Task not found", http.StatusNotFound)
 		return
 	}
-
-	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, "Task marked as completed, %d rows affected", rowsAffected)
+	fmt.Printf("Task marked as completed, %d rows affected\n", rowsAffected)
 }
 
 // DeleteTask deletes a task using the strategy and returns the number of rows affected
-func (dtm *DatabaseTaskManager) DeleteTask(w http.ResponseWriter, r *http.Request) {
+func (dtm *DatabaseTaskManager) DeleteTask(id string) {
 	dtm.mu.Lock()
 	defer dtm.mu.Unlock()
 
-	id := r.URL.Query().Get("id")
+	//id := r.URL.Query().Get("id")
 	taskID, err := strconv.Atoi(id)
 	if err != nil {
-		http.Error(w, "Invalid task ID", http.StatusBadRequest)
+		fmt.Println("Invalid task ID", http.StatusBadRequest)
 		return
 	}
 
 	// Call DeleteTask on the strategy (pass the task ID as an int)
 	rowsAffected, err := dtm.strategy.DeleteTask(taskID)
 	if err != nil {
-		http.Error(w, "Error deleting task", http.StatusInternalServerError)
+		fmt.Println("Error deleting task", http.StatusInternalServerError)
 		return
 	}
 
 	if rowsAffected == 0 {
-		http.Error(w, "Task not found", http.StatusNotFound)
+		fmt.Println("Task not found", http.StatusNotFound)
 		return
 	}
-
-	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, "Task deleted successfully, %d rows affected", rowsAffected)
+	fmt.Printf("Task deleted successfully, %d rows affected\n", rowsAffected)
 }

@@ -1,7 +1,7 @@
 package jwt
 
 import (
-	"context"
+	"TODO-LIST/utils"
 	"fmt"
 	"net/http"
 	"strings"
@@ -75,10 +75,11 @@ func AuthenticateJWT(next http.Handler) http.Handler {
 			return
 		}
 
-		// Add client ID to context (optional)
-		r = r.WithContext(context.WithValue(r.Context(), "client_id", claims.ClientID))
+		// Add client ID to context using the helper function
+		r = r.WithContext(utils.AddClientIDToContext(r.Context(), claims.ClientID))
 		fmt.Println("Client ID from token:", claims.ClientID)
 
+		// Call the next handler
 		next.ServeHTTP(w, r)
 	})
 }

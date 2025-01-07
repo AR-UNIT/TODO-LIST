@@ -10,8 +10,8 @@ type CombinedRowLockingEnhancedListStrategy struct {
 	EnhancedListStrategy EnhancedListStrategy
 }
 
-func (crls *CombinedRowLockingEnhancedListStrategy) AddTask(task commons.Task) (int, error) {
-	return crls.RowLockingStrategy.AddTask(task)
+func (crls *CombinedRowLockingEnhancedListStrategy) AddTask(taskInput *commons.TaskInputModel) (int, error) {
+	return crls.RowLockingStrategy.AddTask(taskInput)
 }
 
 func (crls *CombinedRowLockingEnhancedListStrategy) ListTasks(params map[string]interface{}) ([]commons.Task, error) {
