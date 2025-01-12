@@ -21,7 +21,7 @@ The project implements logically simple CRUD operations for a TODO application, 
 - **Kafka**: Streams events from API requests and consumes events at the task manager for decoupled processing.
 - **Redis**: Used for caching and performing batch updates to reduce DB calls as the application scales.
 
-## Database Isolation and Concurrency
+## Database Isolation Level and Concurrency
 
 - **Row Locking For writes Strategy**: Prevents race conditions during write/update operations.
 - **Read Committed Isolation Level**: Default isolation level in PostgresDB that provides certain guarantees but allows potential stale reads.
