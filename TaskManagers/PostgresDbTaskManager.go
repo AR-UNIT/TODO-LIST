@@ -190,18 +190,16 @@ func (dtm *DatabaseTaskManager) CompleteTask(id string) {
 	dtm.mu.Lock()
 	defer dtm.mu.Unlock()
 
-	// Convert id from string to int
-	//id := r.URL.Query().Get("id")
 	taskID, err := strconv.Atoi(id)
 	if err != nil {
-		fmt.Println("Invalid task ID", http.StatusBadRequest)
+		fmt.Println(err, http.StatusBadRequest)
 		return
 	}
 
 	// Call CompleteTask on the strategy (pass the task ID as an int)
 	rowsAffected, err := dtm.strategy.CompleteTask(taskID)
 	if err != nil {
-		fmt.Println("Error deleting task", http.StatusInternalServerError)
+		fmt.Println("Error completing task", err)
 		return
 	}
 

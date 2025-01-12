@@ -74,25 +74,18 @@ func handleKafkaEvent(event KafkaEvent, taskManager TaskManagers.TaskManager) {
 	switch event.EventType {
 
 	case constants.CREATE_TASK:
+		fmt.Println("Handle CompleteTask event")
 		taskManager.AddTask(taskInput)
 
 	case constants.COMPLETE_TASK:
-		log.Println("Handle CompleteTask event")
-		// Use taskManager to complete a task
-		fmt.Println("at complete task")
-
-		//taskManager.CompleteTask(event.Payload)
-		//if err != nil {
-		//	log.Printf("Error completing task: %v", err)
-		//}
+		fmt.Println("Handle CompleteTask event")
+		rowId := event.QueryParams["id"]
+		taskManager.CompleteTask(rowId)
 
 	case constants.DELETE_TASK:
-		log.Println("Handle DeleteTask event")
-		// Use taskManager to delete a task
-		//err := taskManager.DeleteTask(event.Payload)
-		//if err != nil {
-		//	log.Printf("Error deleting task: %v", err)
-		//}
+		fmt.Println("Handle DeleteTask event")
+		rowId := event.QueryParams["id"]
+		taskManager.DeleteTask(rowId)
 
 	default:
 		log.Printf("Unhandled event type: %s", event.EventType)

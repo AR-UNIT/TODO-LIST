@@ -80,9 +80,10 @@ func TaskHandler(eventType string, w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Client ID not found or invalid", http.StatusUnauthorized)
 		return
 	}
-	fmt.Println("printing details extracted in task handler: ", headers, queryParams, payload, clientID)
-	// Use the client ID for your logic
-	fmt.Fprintf(w, "Client ID: %s", clientID)
+	fmt.Println("Client ID: ", clientID)
+	fmt.Println("Query Params: ", queryParams)
+	fmt.Println("Payload: ", payload)
+	fmt.Println("headers: ", headers)
 	SendKafkaEvent(eventType, headers, queryParams, payload, r.URL.Path, clientID)
 
 	// Handle HTTP response

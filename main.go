@@ -84,10 +84,30 @@ func main() {
 	*/
 	rateLimiter := RateLimiters.NewRateLimiter(rate.Limit(rateLimit), rateBurst)
 
-	// Register the authentication endpoint
-	// Handles client login and JWT generation
-	// ratelimiter is called first, and rate is applied after identifying client
+	/* 	Register the authentication endpoint
+	Handles client login and JWT generation
+	ratelimiter is called first, and rate is applied after identifying client
+	*/
 	http.Handle("/api/authenticate", rateLimiter.Apply(http.HandlerFunc(handlerJWT.AuthenticateAndProvideJWT)))
+
+	/* registering endpoints for crud operations */
+	http.Handle("/tasks/complete", rateLimiter.Apply(authJWT.AuthenticateJWT(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("Received request for /tasks/complete with method: %s", r.Method)
+		if r.Method == constants.HTTPMethodPatch {
+			kafkaOperations.TaskHandler(constants.COMPLETE_TASK, w, r)
+		} else {
+			http.Error(w, constants.ErrorInvalidMethod, constants.StatusMethodNotAllowed)
+		}
+	}))))
+
+	http.Handle("/tasks/delete", rateLimiter.Apply(authJWT.AuthenticateJWT(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("Received request for /tasks/delete with method: %s", r.Method)
+		if r.Method == constants.HTTPMethodDelete {
+			kafkaOperations.TaskHandler(constants.DELETE_TASK, w, r)
+		} else {
+			http.Error(w, constants.ErrorInvalidMethod, constants.StatusMethodNotAllowed)
+		}
+	}))))
 
 	http.Handle("/tasks", rateLimiter.Apply(authJWT.AuthenticateJWT(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		//http.Handle("/tasks", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -95,18 +115,9 @@ func main() {
 
 		switch r.Method {
 		case constants.HTTPMethodGet:
-			log.Println("method get picked")
-			fmt.Println("picked get operation")
-			// no kafka event generated for list tasks, as it is read only, with no side effects
 			taskManager.ListTasks(w, r)
 		case constants.HTTPMethodPost:
 			kafkaOperations.TaskHandler(constants.CREATE_TASK, w, r)
-		case constants.HTTPMethodPatch:
-			log.Println("method patch picked")
-			fmt.Println("picked update operation")
-			kafkaOperations.TaskHandler(constants.COMPLETE_TASK, w, r)
-		case constants.HTTPMethodDelete:
-			kafkaOperations.TaskHandler(constants.DELETE_TASK, w, r)
 		default:
 			http.Error(w, constants.ErrorInvalidMethod, constants.StatusMethodNotAllowed)
 		}
