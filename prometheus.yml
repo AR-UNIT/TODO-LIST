@@ -1,0 +1,13 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'app'
+    static_configs:
+      - targets: ['app:8080']  # Replace with your app's actual service endpoint
+  - job_name: 'kafka'
+    static_configs:
+      - targets: ['kafka:9093']  # Kafka metrics (if available)
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis:6379']  # Redis metrics

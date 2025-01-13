@@ -4,6 +4,7 @@ import (
 	handlerJWT "TODO-LIST/Handlers/auth"
 	authJWT "TODO-LIST/Middleware/Authenticators/jwt"
 	kafkaOperations "TODO-LIST/Middleware/Messengers/KafkaOperations"
+	"TODO-LIST/Middleware/MetricsCollectors/Prometheus"
 	"TODO-LIST/Middleware/RateLimiters"
 	"TODO-LIST/TaskManagers"
 	redisCache "TODO-LIST/caches/Redis"
@@ -86,63 +87,85 @@ func main() {
 	*/
 	rateLimiter := RateLimiters.NewRateLimiter(rate.Limit(rateLimit), rateBurst)
 
+	redisCache.InitRedis()
+
+	go Prometheus.ExposeMetrics()
+
 	/* 	Register the authentication endpoint
 	Handles client login and JWT generation
 	ratelimiter is called first, and rate is applied after identifying client
 	*/
-
-	redisCache.InitRedis()
-
 	http.Handle("/api/authenticate", rateLimiter.Apply(http.HandlerFunc(handlerJWT.AuthenticateAndProvideJWT)))
 
 	/* registering endpoints for crud operations */
-	http.Handle("/tasks/complete", rateLimiter.Apply(authJWT.AuthenticateJWT(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("Received request for /tasks/complete with method: %s", r.Method)
-		if r.Method == constants.HTTPMethodPatch {
-			kafkaOperations.TaskHandler(constants.COMPLETE_TASK, w, r)
-		} else {
-			http.Error(w, constants.ErrorInvalidMethod, constants.StatusMethodNotAllowed)
-		}
-	}))))
+	http.Handle("/tasks/complete",
+		Prometheus.CountRequests( // Apply Prometheus countRequests middleware
+			rateLimiter.Apply( // Apply the rate limiter
+				authJWT.AuthenticateJWT( // Apply JWT authentication
+					http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						log.Printf("Received request for /tasks/complete with method: %s", r.Method)
+						if r.Method == constants.HTTPMethodPatch {
+							kafkaOperations.TaskHandler(constants.COMPLETE_TASK, w, r)
+						} else {
+							http.Error(w, constants.ErrorInvalidMethod, constants.StatusMethodNotAllowed)
+						}
+					}),
+				),
+			),
+		),
+	)
 
-	http.Handle("/tasks/delete", rateLimiter.Apply(authJWT.AuthenticateJWT(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("Received request for /tasks/delete with method: %s", r.Method)
-		if r.Method == constants.HTTPMethodDelete {
-			kafkaOperations.TaskHandler(constants.DELETE_TASK, w, r)
-		} else {
-			http.Error(w, constants.ErrorInvalidMethod, constants.StatusMethodNotAllowed)
-		}
-	}))))
+	http.Handle("/tasks/delete",
+		Prometheus.CountRequests( // Apply Prometheus countRequests middleware
+			rateLimiter.Apply( // Apply the rate limiter
+				authJWT.AuthenticateJWT( // Apply JWT authentication
+					http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						log.Printf("Received request for /tasks/delete with method: %s", r.Method)
+						if r.Method == constants.HTTPMethodDelete {
+							kafkaOperations.TaskHandler(constants.DELETE_TASK, w, r)
+						} else {
+							http.Error(w, constants.ErrorInvalidMethod, constants.StatusMethodNotAllowed)
+						}
+					}),
+				),
+			),
+		),
+	)
+	http.Handle("/tasks",
+		Prometheus.CountRequests( // Apply Prometheus countRequests middleware
+			rateLimiter.Apply( // Apply the rate limiter
+				authJWT.AuthenticateJWT( // Apply JWT authentication
+					http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						log.Printf("Received request for /tasks with method: %s", r.Method)
 
-	http.Handle("/tasks", rateLimiter.Apply(authJWT.AuthenticateJWT(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		//http.Handle("/tasks", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("Received request for /tasks with method: %s", r.Method)
+						switch r.Method {
+						case constants.HTTPMethodGet:
+							taskID := r.URL.Query().Get("id")
 
-		switch r.Method {
-		case constants.HTTPMethodGet:
-			taskID := r.URL.Query().Get("id")
+							// Check Redis cache first
+							task, err := redisCache.GetTaskFromCache(taskID)
+							if err != nil {
+								fmt.Println("Error while making cache call for tasks")
+							}
+							if task != nil {
+								// Cache hit, return the task directly
+								w.WriteHeader(http.StatusOK)
+								json.NewEncoder(w).Encode(task)
+							} else {
+								// Cache miss, fetch from DB
+								taskManager.ListTasks(w, r)
+							}
 
-			// Check Redis cache first
-
-			task, err := redisCache.GetTaskFromCache(taskID)
-			if err != nil {
-				fmt.Println("error while making cache call for tasks")
-			}
-			if task != nil {
-				// Cache hit, return the task directly
-				w.WriteHeader(http.StatusOK)
-				json.NewEncoder(w).Encode(task)
-			} else {
-				// cache miss, fetch from db
-				taskManager.ListTasks(w, r)
-			}
-
-		case constants.HTTPMethodPost:
-			kafkaOperations.TaskHandler(constants.CREATE_TASK, w, r)
-		default:
-			http.Error(w, constants.ErrorInvalidMethod, constants.StatusMethodNotAllowed)
-		}
-	}))))
+						case constants.HTTPMethodPost:
+							kafkaOperations.TaskHandler(constants.CREATE_TASK, w, r)
+						default:
+							http.Error(w, constants.ErrorInvalidMethod, constants.StatusMethodNotAllowed)
+						}
+					}),
+				),
+			),
+		),
+	)
 
 	// Start the server
 	apiPort := os.Getenv("API_PORT")
@@ -154,7 +177,8 @@ func main() {
 
 	// TODO:
 	// THIS WILL NEVER BE CALLED WITHOUT A GRACEFUL SHUTDOWN HANDLER,
-	// ALSO THIS IS NOT USEFUL IF WE ARE NOT USING A CACHE TO STORE OPERATIONS IN MEMORY,
+	// ALSO THIS IS NOT USEFUL IF WE ARE NOT USING DOING PERSISTANCE OF CACHED UPDATED TO DB BEFORE UPON FAILURE,
+	// THIS IS GENERALLY NOT FAULT TOLERANT WITHOUT RECOVERY ROUTINE, NEED TO FIX
 	// ALL OPERATIONS ARE ALWAYS BEEN DONE DIRECTLY TO THE DB
 	// Save tasks to the file when the application exits
 	defer taskManager.LazySave()
