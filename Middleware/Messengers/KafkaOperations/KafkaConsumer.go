@@ -3,12 +3,14 @@ package KafkaOperations
 import (
 	"TODO-LIST/Deserializers"
 	"TODO-LIST/TaskManagers"
+	redisCache "TODO-LIST/caches/Redis"
 	"TODO-LIST/constants"
 	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/segmentio/kafka-go"
 	"log"
+	"strconv"
 )
 
 // KafkaConsumerConfig holds the configuration for the Kafka consumer
@@ -75,17 +77,34 @@ func handleKafkaEvent(event KafkaEvent, taskManager TaskManagers.TaskManager) {
 
 	case constants.CREATE_TASK:
 		fmt.Println("Handle CompleteTask event")
-		taskManager.AddTask(taskInput)
+		addedTask := taskManager.AddTask(taskInput)
+		// Cache the task after DB insertion
+		taskID := strconv.Itoa(addedTask.ID)
+		// add task to cache, so next fetch could be from cache instead of db call
+		err := redisCache.CacheTask(taskID, addedTask)
+		if err != nil {
+			log.Printf("Error caching task after DB insert: %v", err)
+		}
 
 	case constants.COMPLETE_TASK:
 		fmt.Println("Handle CompleteTask event")
-		rowId := event.QueryParams["id"]
-		taskManager.CompleteTask(rowId)
+		taskId := event.QueryParams["id"]
+		taskManager.CompleteTask(taskId)
+		// need to invalidate entry in cache, once we have updated it in db
+		err := redisCache.DeleteTaskFromCache(taskId)
+		if err != nil {
+			log.Printf("Error deleting task from cache task after DB delete: %v", err)
+		}
 
 	case constants.DELETE_TASK:
 		fmt.Println("Handle DeleteTask event")
-		rowId := event.QueryParams["id"]
-		taskManager.DeleteTask(rowId)
+		taskId := event.QueryParams["id"]
+		taskManager.DeleteTask(taskId)
+		// need to invalidate entry in cache, once we have deleted it from db
+		err := redisCache.DeleteTaskFromCache(taskId)
+		if err != nil {
+			log.Printf("Error deleting task from cache task after DB delete: %v", err)
+		}
 
 	default:
 		log.Printf("Unhandled event type: %s", event.EventType)

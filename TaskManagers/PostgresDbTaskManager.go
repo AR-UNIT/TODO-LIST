@@ -139,7 +139,7 @@ func (dtm *DatabaseTaskManager) Initialize() {
 }
 
 // AddTask adds a task to the database using the strategy
-func (dtm *DatabaseTaskManager) AddTask(taskInput *commons.TaskInputModel) {
+func (dtm *DatabaseTaskManager) AddTask(taskInput *commons.TaskInputModel) (addedTask *commons.Task) {
 	dtm.mu.Lock()
 	defer dtm.mu.Unlock()
 	fmt.Println("Before dtm.strategy.AddTask")
@@ -150,6 +150,11 @@ func (dtm *DatabaseTaskManager) AddTask(taskInput *commons.TaskInputModel) {
 		return
 	}
 	fmt.Println("Task Created with ID: ", id)
+	var task commons.Task
+	task.ID = id
+	task.Description = taskInput.Description
+	task.Completed = false
+	return &task
 }
 
 func (dtm *DatabaseTaskManager) ListTasks(w http.ResponseWriter, r *http.Request) {

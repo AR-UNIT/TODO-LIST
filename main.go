@@ -6,7 +6,9 @@ import (
 	kafkaOperations "TODO-LIST/Middleware/Messengers/KafkaOperations"
 	"TODO-LIST/Middleware/RateLimiters"
 	"TODO-LIST/TaskManagers"
+	redisCache "TODO-LIST/caches/Redis"
 	"TODO-LIST/constants"
+	"encoding/json"
 	"fmt"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
@@ -88,6 +90,9 @@ func main() {
 	Handles client login and JWT generation
 	ratelimiter is called first, and rate is applied after identifying client
 	*/
+
+	redisCache.InitRedis()
+
 	http.Handle("/api/authenticate", rateLimiter.Apply(http.HandlerFunc(handlerJWT.AuthenticateAndProvideJWT)))
 
 	/* registering endpoints for crud operations */
@@ -115,7 +120,23 @@ func main() {
 
 		switch r.Method {
 		case constants.HTTPMethodGet:
-			taskManager.ListTasks(w, r)
+			taskID := r.URL.Query().Get("id")
+
+			// Check Redis cache first
+
+			task, err := redisCache.GetTaskFromCache(taskID)
+			if err != nil {
+				fmt.Println("error while making cache call for tasks")
+			}
+			if task != nil {
+				// Cache hit, return the task directly
+				w.WriteHeader(http.StatusOK)
+				json.NewEncoder(w).Encode(task)
+			} else {
+				// cache miss, fetch from db
+				taskManager.ListTasks(w, r)
+			}
+
 		case constants.HTTPMethodPost:
 			kafkaOperations.TaskHandler(constants.CREATE_TASK, w, r)
 		default:

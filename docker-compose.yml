@@ -17,10 +17,13 @@ services:
       - DB_NAME=${DB_NAME}
       - KAFKA_BROKER_ADDRESS=kafka:9093
       - KAFKA_TOPIC=${KAFKA_TOPIC}
+      - REDIS_HOST=${REDIS_HOST}  # Add Redis hostname for app connection
+      - REDIS_PORT=${REDIS_PORT}   # Default Redis port
     depends_on:
       - postgres
       - kafka
-    restart: always  # Ensure the app restarts if it fails
+      - redis  # Add Redis as a dependency
+    restart: always
     healthcheck:
       test: ["CMD", "nc", "-z", "kafka", "9093"]  # Wait for Kafka to be up
       interval: 10s
@@ -50,7 +53,7 @@ services:
       retries: 5
       start_period: 10s
       timeout: 5s
-    restart: always  # Ensure the Postgres service restarts if it fails
+    restart: always
 
   kafka:
     image: wurstmeister/kafka:latest
@@ -78,6 +81,18 @@ services:
       ZOOKEEPER_CLIENT_PORT: 2181
     ports:
       - "2181:2181"  # Expose Zookeeper client port
+
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"  # Expose Redis default port
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      retries: 5
+      start_period: 10s
+      timeout: 5s
+    restart: always
 
 volumes:
   kafka-data:

@@ -10,7 +10,7 @@ import (
 type TaskManager interface {
 	Initialize()
 	SaveTasks() error
-	AddTask(task *commons.TaskInputModel)
+	AddTask(task *commons.TaskInputModel) (addedTask *commons.Task)
 	ListTasks(w http.ResponseWriter, r *http.Request)
 	CompleteTask(taskId string)
 	DeleteTask(taskId string)
