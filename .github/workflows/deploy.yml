@@ -1,0 +1,26 @@
+name: Deploy to Docker
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Ansible
+        uses: dawidd6/action-install-ansible@v2
+        with:
+          version: '2.10'
+
+      - name: Run Ansible Playbook
+        run: |
+          ansible-playbook -i ansible/hosts.ini ansible/playbook.yml
+        env:
+          ANSIBLE_HOST_KEY_CHECKING: 'False'
+          ANSIBLE_PRIVATE_KEY: ${{ secrets.ANSIBLE_PRIVATE_KEY }}

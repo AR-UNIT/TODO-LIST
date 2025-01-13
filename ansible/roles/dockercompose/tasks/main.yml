@@ -1,0 +1,12 @@
+- name: Ensure docker-compose.yml is in place
+  copy:
+    src: ../../docker-compose.yml
+    dest: /path/to/deploy/docker-compose.yml
+    mode: '0644'
+  become: true
+
+- name: Start services with docker-compose
+  command:
+    cmd: "docker-compose up -d"
+    chdir: /path/to/deploy/
+  become: true

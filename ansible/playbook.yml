@@ -1,0 +1,39 @@
+---
+- name: Deploy Docker Compose Application
+  hosts: local
+  become: true
+  tasks:
+    - name: Ensure Docker is installed
+      include_role:
+        name: docker
+
+    - name: Ensure Docker Compose is installed
+      include_role:
+        name: docker_compose
+
+    - name: Copy .env file
+      copy:
+        src: ./path_to_your_env/.env
+        dest: /home/user/.env  # Adjust path to where you want the .env file
+
+    - name: Deploy containers using Docker Compose
+      docker_compose:
+        project_src: ./path_to_your_docker_compose_file  # Path where your docker-compose.yml is located
+        restarted: yes
+        remove_orphans: yes
+
+    - name: Wait for containers to be up (app, postgres, kafka, redis)
+      wait_for:
+        host: "{{ item }}"
+        port: "{{ port }}"
+        delay: 10
+        timeout: 60
+      with_items:
+        - { host: "localhost", port: "8080" }
+        - { host: "localhost", port: "5432" }
+        - { host: "localhost", port: "9093" }
+        - { host: "localhost", port: "6379" }
+
+    - name: Print "Deployment Complete"
+      debug:
+        msg: "Application and services deployed successfully"
