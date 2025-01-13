@@ -6,7 +6,7 @@ The project implements logically simple CRUD operations for a TODO application, 
 
 ## Technologies & Tools
 
-- **PostgresDB**: Default storage method, with code designed to support extension to different storage methods.
+- **PostgresDB**: Default storage method, with code extensible to different storage methods.
 - **Docker & Kubernetes**: Application containerized and orchestrated using Docker and Kubernetes.
   - **Postgres Container**
   - **Zookeeper Container**
