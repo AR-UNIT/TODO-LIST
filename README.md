@@ -28,7 +28,7 @@ The project implements logically simple CRUD operations for a TODO application, 
 
 ### Race Condition Safety in Read Committed and Row Locking
 
-- **Read-Read**: Safe, no race condition.
+- **Read-Read**: Safe, no race condition(idempotent).
 - **Read-Write**: Not safe; may lead to stale reads.
 - **Write-Read**: Not safe; may lead to stale or inconsistent reads.
 - **Write-Write**: Safe; row-level locking prevents conflicting writes.
