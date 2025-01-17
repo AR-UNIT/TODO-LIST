@@ -57,3 +57,27 @@ The project implements logically simple CRUD operations for a TODO application, 
    - The primary database for storing TODO items.
 7. **Deployment**:
    - Dockerized services orchestrated with Kubernetes.
+
+USAGE (API CALLS):
+
+Get jwt token:
+$response = Invoke-WebRequest -Uri "http://localhost:8080/api/authenticate" -Method GET -Headers @{"client_id"="admin"; "client_secret"="password"; "Content-Type"="application/json"}
+$token = ($response.Content | ConvertFrom-Json).token
+
+
+GET TASKS / LIST TASKS
+Invoke-WebRequest -Uri "http://localhost:8080/tasks" -Method GET -Headers @{"Authorization"="Bearer $token";"client_id"="admin";"client_secret"="password";"Content-Type"="application/json"}
+
+Invoke-WebRequest -Uri "http://localhost:8080/tasks?page=1&limit=10" -Method GET -Headers @{"Authorization"="Bearer $token";"client_id"="admin";"client_secret"="password";"Content-Type"="application/json"}
+
+
+ADD TASKS 
+Invoke-WebRequest -Uri "http://localhost:8080/tasks" -Method POST -Headers @{"Authorization"="Bearer $token"; "client_id"="admin"; "client_secret"="password";"Content-Type"="application/json"} -Body '{"description": "Buy groceries"}'
+
+COMPLETE TASKS
+Invoke-WebRequest -Uri http://localhost:8080/tasks/complete?id=3 -Method PATCH -Headers @{"Authorization"="Bearer $token"; "client_id"="admin" ;"client_secret"="password";"Content-Type"="application/json"}
+
+
+DELETE TASKS
+Invoke-WebRequest -Uri http://localhost:8080/tasks/delete?id=1 -Method DELETE -Headers @{"Authorization"="Bearer $token";"client_id"="admin";"client_secret"="password";"Content-Type"="application/json"}
+
