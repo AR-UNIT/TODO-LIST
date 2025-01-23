@@ -22,7 +22,7 @@ todo
 
 ## Technologies & Tools
 
-- **PostgresDB**: Default storage method, with code designed to support extension to different storage methods.
+- **PostgresDB**: Default storage method, with code extensible to different storage methods.
 - **Docker & Kubernetes**: Application containerized and orchestrated using Docker and Kubernetes.
   - **Postgres Container**
   - **Zookeeper Container**
@@ -44,7 +44,7 @@ todo
 
 ### Race Condition Safety in Read Committed and Row Locking
 
-- **Read-Read**: Safe, no race condition.
+- **Read-Read**: Safe, no race condition(idempotent).
 - **Read-Write**: Not safe; may lead to stale reads.
 - **Write-Read**: Not safe; may lead to stale or inconsistent reads.
 - **Write-Write**: Safe; row-level locking prevents conflicting writes.
@@ -73,3 +73,27 @@ todo
    - The primary database for storing TODO items.
 7. **Deployment**:
    - Dockerized services orchestrated with Kubernetes.
+
+USAGE (API CALLS):
+
+Get jwt token:
+$response = Invoke-WebRequest -Uri "http://localhost:8080/api/authenticate" -Method GET -Headers @{"client_id"="admin"; "client_secret"="password"; "Content-Type"="application/json"}
+$token = ($response.Content | ConvertFrom-Json).token
+
+
+GET TASKS / LIST TASKS
+Invoke-WebRequest -Uri "http://localhost:8080/tasks" -Method GET -Headers @{"Authorization"="Bearer $token";"client_id"="admin";"client_secret"="password";"Content-Type"="application/json"}
+
+Invoke-WebRequest -Uri "http://localhost:8080/tasks?page=1&limit=10" -Method GET -Headers @{"Authorization"="Bearer $token";"client_id"="admin";"client_secret"="password";"Content-Type"="application/json"}
+
+
+ADD TASKS 
+Invoke-WebRequest -Uri "http://localhost:8080/tasks" -Method POST -Headers @{"Authorization"="Bearer $token"; "client_id"="admin"; "client_secret"="password";"Content-Type"="application/json"} -Body '{"description": "Buy groceries"}'
+
+COMPLETE TASKS
+Invoke-WebRequest -Uri http://localhost:8080/tasks/complete?id=3 -Method PATCH -Headers @{"Authorization"="Bearer $token"; "client_id"="admin" ;"client_secret"="password";"Content-Type"="application/json"}
+
+
+DELETE TASKS
+Invoke-WebRequest -Uri http://localhost:8080/tasks/delete?id=1 -Method DELETE -Headers @{"Authorization"="Bearer $token";"client_id"="admin";"client_secret"="password";"Content-Type"="application/json"}
+
