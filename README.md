@@ -4,6 +4,22 @@
 
 The project implements logically simple CRUD operations for a TODO application, while incorporating a wide range of tools and frameworks to enhance functionality and scalability.
 
+
+## LLD Diagrams
+
+### JWT Authentication Endpoint
+![JWT Authentication Endpoint](./JWT%20TOKEN%20AUTH%20ENDPOINT.drawio.png)
+
+
+### CRUD Endpoint Operations
+![CRUD Endpoint Operations](./CRUD%20ENDPOINTS.drawio.png)
+
+### CACHING DIAGRAM
+todo
+
+### HIGH LEVEL SOFTWARE ARCHITECTURE DIAGRAM
+todo
+
 ## Technologies & Tools
 
 - **PostgresDB**: Default storage method, with code designed to support extension to different storage methods.
