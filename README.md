@@ -14,11 +14,9 @@ The project implements logically simple CRUD operations for a TODO application, 
 ### CRUD Endpoint Operations
 ![CRUD Endpoint Operations](./CRUD%20ENDPOINTS.drawio.png)
 
-### CACHING DIAGRAM
-todo
 
 ### HIGH LEVEL SOFTWARE ARCHITECTURE DIAGRAM
-todo
+![high level design diagram](./high%20level%20design%20diagram.png)
 
 ## Technologies & Tools
 
